@@ -25,6 +25,10 @@ class AlastProjectPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+private:
+	// 이전에 클릭했던 목적지를 기억하는 변수
+	FVector LastDestination = FVector::ZeroVector;
+
 public:
 	AlastProjectPlayerController();
 

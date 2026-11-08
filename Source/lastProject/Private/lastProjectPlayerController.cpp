@@ -169,7 +169,7 @@ void AlastProjectPlayerController::SetupInputComponent()
 
 void AlastProjectPlayerController::OnInputStarted()
 {
-	StopMovement();
+	//StopMovement();
 }
 
 // Triggered every frame when the input is held down
@@ -179,7 +179,6 @@ void AlastProjectPlayerController::OnSetDestinationTriggered()
 		return;
 
 	if (isSniping || isMine) return;
-
 
 	FollowTime += GetWorld()->GetDeltaSeconds();
 
@@ -200,7 +199,9 @@ void AlastProjectPlayerController::OnSetDestinationTriggered()
 	{
 		CachedDestination = Hit.Location;
 	}
-	
+
+	// ======= 이 아래 부분을 삭제하거나 주석 처리하세요! =======
+	/*
 	// Move towards mouse pointer or touch
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn != nullptr)
@@ -208,22 +209,33 @@ void AlastProjectPlayerController::OnSetDestinationTriggered()
 		FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
 		ControlledPawn->AddMovementInput(WorldDirection, 1.0, false);
 	}
-
-	
+	*/
+	// =========================================================
 }
 
 void AlastProjectPlayerController::OnSetDestinationReleased()
 {
-	if (isDie)
-		return;
-
-	if (isSniping || isMine) return;
+	if (isDie || isSniping || isMine) return;
 
 	if (FollowTime <= ShortPressThreshold)
 	{
-		// We move there and spawn some particles
-		UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, CachedDestination);
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FXCursor, CachedDestination, FRotator::ZeroRotator, FVector(1.f, 1.f, 1.f), true, true, ENCPoolMethod::None, true);
+		// 1. 캐릭터의 현재 속도를 가져옵니다.
+		float CurrentSpeed = GetPawn() ? GetPawn()->GetVelocity().Size() : 0.0f;
+
+		// 2. 이전에 클릭했던 목적지와 지금 새로 클릭한 목적지 사이의 거리를 계산합니다.
+		float DistanceToLastClick = FVector::Dist(CachedDestination, LastDestination);
+
+		// [핵심 해결 로직]
+		// 캐릭터가 거의 멈춰 있거나 (CurrentSpeed < 10.0f) OR
+		// 새로 클릭한 곳이 이전 목적지보다 100 유닛 이상 떨어져 있을 때만(의미 있는 방향 전환) 이동 명령을 내립니다.
+		if (CurrentSpeed < 10.0f || DistanceToLastClick > 100.0f)
+		{
+			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, CachedDestination);
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FXCursor, CachedDestination, FRotator::ZeroRotator, FVector(1.f, 1.f, 1.f), true, true, ENCPoolMethod::None, true);
+
+			// 다음 비교를 위해 이번에 클릭한 목적지를 저장해 둡니다.
+			LastDestination = CachedDestination;
+		}
 	}
 
 	FollowTime = 0.f;
